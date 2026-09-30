@@ -108,4 +108,8 @@
 ./scripts/dock.sh "docker exec -e ASTRBOT_ROOT=/tmp/fakeroot -e ASTRBOT_CONFIG_PATH=/tmp/fakeroot/cmd_config.json astrbot python3 /tmp/fmg_check/test_offline.py"
 ```
 
-> ⚠️ **那两个 `-e` 不能省。** `import astrbot` 会走到 `AstrBotConfig.__init__`，它一初始化就往 `data/cmd_config.json` 写盘。不重定向就会改到正在跑的实例的配置（详见 `plugins/qq_api/README.md`）。
+> ⚠️ **那两个 `-e` 不能省。** `import astrbot` 会走到 `AstrBotConfig.__init__`，它一初始化就往 `data/cmd_config.json` 写盘。不重定向就会改到正在跑的实例的配置（详见 [qq_api 的 README](https://github.com/cyberElar/qq_api#自测)）。
+
+## 许可证
+
+AGPL-3.0，全文见 [LICENSE](LICENSE)。
