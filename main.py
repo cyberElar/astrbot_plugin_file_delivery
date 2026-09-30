@@ -108,7 +108,7 @@ GUARDED_MEDIA = (File, Record, Video)
 DOWNLOAD_TIMEOUT = 30
 
 # 打在包装函数上的标记，用来识别「拦截是否已经生效」（热重载会重复走到这里）。
-_PATCH_MARK = "_file_delivery_patched"
+_PATCH_MARK = "_astrbot_plugin_file_delivery_patched"
 
 _STATUS: dict[str, str] = {}
 
@@ -140,12 +140,12 @@ async def _materialize(abm) -> None:
             await asyncio.wait_for(comp.get_file(), timeout=DOWNLOAD_TIMEOUT)
         except asyncio.TimeoutError:
             logger.warning(
-                f"[file_delivery] 下载超时（{DOWNLOAD_TIMEOUT}s），"
+                f"[astrbot_plugin_file_delivery] 下载超时（{DOWNLOAD_TIMEOUT}s），"
                 f"该文件退回排队路径：{comp.name}"
             )
         except Exception:
             logger.warning(
-                f"[file_delivery] 下载失败，该文件退回排队路径：{comp.name}",
+                f"[astrbot_plugin_file_delivery] 下载失败，该文件退回排队路径：{comp.name}",
                 exc_info=True,
             )
 
@@ -230,7 +230,7 @@ def _install_capture_guard() -> str:
         pending = _pending_media(event)
         if pending:
             logger.info(
-                f"[file_delivery] {pending} 未物化，不并入插话，改走正常路径"
+                f"[astrbot_plugin_file_delivery] {pending} 未物化，不并入插话，改走正常路径"
             )
             return None
         return original(event)
@@ -254,7 +254,7 @@ def install() -> dict[str, str]:
 
 
 @register(
-    "file_delivery",
+    "astrbot_plugin_file_delivery",
     "Elarian",
     "让 Agent 正忙时发来的文件真正送达 —— 入口即落盘，运行中也能读到。",
     "2.0.0",
@@ -263,7 +263,7 @@ class FileDelivery(Star):
     def __init__(self, context: Context) -> None:
         super().__init__(context)
         logger.info(
-            "[file_delivery] "
+            "[astrbot_plugin_file_delivery] "
             + "；".join(f"{k}={v}" for k, v in install().items())
         )
 
@@ -272,7 +272,7 @@ class FileDelivery(Star):
     async def filedelivery(self, event: AstrMessageEvent):
         """看一眼三处拦截是不是都挂上了。"""
         yield event.plain_result(
-            "file_delivery\n"
+            "astrbot_plugin_file_delivery\n"
             + "\n".join(f"  {k}：{v}" for k, v in _STATUS.items())
             + f"\n入口预下载：{', '.join(t.__name__ for t in INGRESS_MATERIALIZE)}"
             f"\n未物化则排队：{', '.join(t.__name__ for t in GUARDED_MEDIA)}"

@@ -1,8 +1,8 @@
-name: file_delivery
+name: astrbot_plugin_file_delivery
 desc: 让「Agent 正忙时发来的文件」真正送达。AstrBot 把这类消息交给「插话」通道处理，而插话只保留文本 —— 文件从未下载、事后无痕；本插件在适配器入口就把文件落盘，并把路径一并交给运行中的 Agent。
 author: Elarian
 version: 2.0.0
-repo: https://github.com/cyberElar/file_delivery
+repo: https://github.com/cyberElar/astrbot_plugin_file_delivery
 display_name: 文件送达
 short_desc: Agent 忙时发来的文件不再丢失 —— 入口即落盘，运行中也能读到
 # 这个插件依赖 4.28.x 的插话通道实现；版本不匹配时让 AstrBot 直接阻止加载，

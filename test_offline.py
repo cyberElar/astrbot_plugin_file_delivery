@@ -38,7 +38,7 @@ def make_event(segments, text: str = "") -> types.SimpleNamespace:
 
 def load_plugin():
     spec = importlib.util.spec_from_file_location(
-        "file_delivery_main", Path(__file__).with_name("main.py")
+        "astrbot_plugin_file_delivery_main", Path(__file__).with_name("main.py")
     )
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)

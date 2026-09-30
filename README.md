@@ -1,4 +1,4 @@
-# file_delivery
+# astrbot_plugin_file_delivery
 
 让「Agent 正忙时发来的文件」真正送达 —— 在适配器入口就把文件落盘，再把路径交给运行中的 Agent。
 
@@ -59,16 +59,16 @@ Agent 某一轮还没结束（正在跑工具调用循环）时，同一发送�
 
 ## 装法
 
-插件源码在**本仓库**，不在 QQBot 仓库里 —— 所以 compose 里挂的是 `../file_delivery`（相对 compose 文件所在目录）。跟 `qq_api` 一样，插件要**逐个挂**：
+插件源码在**本仓库**，不在 QQBot 仓库里 —— 所以 compose 里挂的是 `../astrbot_plugin_file_delivery`（相对 compose 文件所在目录）。跟 `qq_api` 一样，插件要**逐个挂**：
 
 ```yaml
-      - ../file_delivery:/AstrBot/data/plugins/file_delivery
+      - ../astrbot_plugin_file_delivery:/AstrBot/data/plugins/astrbot_plugin_file_delivery
 ```
 
 挂完重启 astrbot。启动日志里出现这行就算生效：
 
 ```
-[file_delivery] 入口物化=已生效；插话带路径=已生效；未物化则排队=已生效
+[astrbot_plugin_file_delivery] 入口物化=已生效；插话带路径=已生效；未物化则排队=已生效
 ```
 
 在聊天里发 `/filedelivery`（仅管理员）也能随时复查三处拦截的状态。
@@ -101,12 +101,12 @@ Agent 某一轮还没结束（正在跑工具调用循环）时，同一发送�
 
 `test_offline.py` 不连 QQ、不起 AstrBot、不联网，验证三处拦截拦没拦住、该委派的有没委派、文本拼得对不对（19 项）：
 
-> 下面的命令在 **QQBot 仓库根目录**执行：`scripts/dock.sh` 在那儿，而插件源码在本仓库，所以路径写成 `../file_delivery/`。
+> 下面的命令在 **QQBot 仓库根目录**执行：`scripts/dock.sh` 在那儿，而插件源码在本仓库，所以路径写成 `../astrbot_plugin_file_delivery/`。
 
 ```bash
 ./scripts/dock.sh "docker exec astrbot mkdir -p /tmp/fakeroot /tmp/fmg_check"
-./scripts/dock.sh "docker cp ../file_delivery/main.py astrbot:/tmp/fmg_check/main.py"
-./scripts/dock.sh "docker cp ../file_delivery/test_offline.py astrbot:/tmp/fmg_check/test_offline.py"
+./scripts/dock.sh "docker cp ../astrbot_plugin_file_delivery/main.py astrbot:/tmp/fmg_check/main.py"
+./scripts/dock.sh "docker cp ../astrbot_plugin_file_delivery/test_offline.py astrbot:/tmp/fmg_check/test_offline.py"
 ./scripts/dock.sh "docker exec -e ASTRBOT_ROOT=/tmp/fakeroot -e ASTRBOT_CONFIG_PATH=/tmp/fakeroot/cmd_config.json astrbot python3 /tmp/fmg_check/test_offline.py"
 ```
 
