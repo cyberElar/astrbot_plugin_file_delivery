@@ -59,10 +59,10 @@
 
 ## 装法
 
-靠 compose 里这一行挂进容器（跟 `qq_api` 一样，插件要**逐个挂**）：
+插件源码在**本仓库**，不在 QQBot 仓库里 —— 所以 compose 里挂的是 `../followup_media_guard`（相对 compose 文件所在目录）。跟 `qq_api` 一样，插件要**逐个挂**：
 
 ```yaml
-      - ./plugins/followup_media_guard:/AstrBot/data/plugins/followup_media_guard
+      - ../followup_media_guard:/AstrBot/data/plugins/followup_media_guard
 ```
 
 挂完重启 astrbot。启动日志里出现这行就算生效：
@@ -101,10 +101,12 @@
 
 `test_offline.py` 不连 QQ、不起 AstrBot、不联网，验证三个补丁拦没拦住、该委派的有没委派、文本拼得对不对（19 项）：
 
+> 下面的命令在 **QQBot 仓库根目录**执行：`scripts/dock.sh` 在那儿，而插件源码在本仓库，所以路径写成 `../followup_media_guard/`。
+
 ```bash
 ./scripts/dock.sh "docker exec astrbot mkdir -p /tmp/fakeroot /tmp/fmg_check"
-./scripts/dock.sh "docker cp plugins/followup_media_guard/main.py astrbot:/tmp/fmg_check/main.py"
-./scripts/dock.sh "docker cp plugins/followup_media_guard/test_offline.py astrbot:/tmp/fmg_check/test_offline.py"
+./scripts/dock.sh "docker cp ../followup_media_guard/main.py astrbot:/tmp/fmg_check/main.py"
+./scripts/dock.sh "docker cp ../followup_media_guard/test_offline.py astrbot:/tmp/fmg_check/test_offline.py"
 ./scripts/dock.sh "docker exec -e ASTRBOT_ROOT=/tmp/fakeroot -e ASTRBOT_CONFIG_PATH=/tmp/fakeroot/cmd_config.json astrbot python3 /tmp/fmg_check/test_offline.py"
 ```
 
