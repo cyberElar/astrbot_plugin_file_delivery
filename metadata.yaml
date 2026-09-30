@@ -1,5 +1,5 @@
 name: followup_media_guard
-desc: 助手运行中发来的文件会被插话通道吞掉 —— 入口就下载，并把路径塞进插话文本（上游 bug 的临时补丁）。
+desc: 助手运行中发来的文件会被插话通道吞掉 —— 入口就下载，并把路径塞进插话文本。
 author: Elarian
 version: 2.0.0
 repo: https://github.com/cyberElar/followup_media_guard
