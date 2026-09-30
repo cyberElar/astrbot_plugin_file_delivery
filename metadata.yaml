@@ -3,3 +3,10 @@ desc: 助手运行中发来的文件会被插话通道吞掉 —— 入口就下
 author: Elarian
 version: 2.0.0
 repo: https://github.com/cyberElar/followup_media_guard
+display_name: 插话媒体守卫
+short_desc: 修复助手运行中发来的文件被插话通道吞掉、从未下载的问题
+# 只针对 4.28.x 的插话通道实现写的补丁；不满足范围时 AstrBot 会阻止加载，
+# 免得在别的版本上静默失效。
+astrbot_version: ">=4.28,<5"
+tags: [修复, 补丁, 文件, 媒体]
+support_platforms: [aiocqhttp]
