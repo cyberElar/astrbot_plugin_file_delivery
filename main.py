@@ -1,4 +1,4 @@
-"""让「Agent 正在忙时发来的文件」真正送达 —— AstrBot 上游 bug 的临时补丁。
+"""让「Agent 正在忙时发来的文件」真正送达。
 
 一句话：在适配器入口就把文件下载落盘，再把路径塞进插话文本，运行中的 Agent 当场
 就能读到。下面记的是它为什么需要存在。
@@ -66,7 +66,7 @@ Agent 正在一次运行中（active runner 未结束）时，同一发送者再
 （`components.py:791` 原话「不可以在异步上下文中同步等待下载!」）。必须
 `await get_file()`。本插件只用 `isinstance` 和 `file_`，不碰它。
 
-**捕获补丁要打在 `internal` 模块上，不是 `follow_up` 模块。** `internal.py:55-62`
+**捕获处的拦截要挂在 `internal` 模块上，不是 `follow_up` 模块。** `internal.py:55-62`
 是 `from ...follow_up import (... try_capture_follow_up ...)`，函数在导入那一刻
 就被绑进了 `internal` 的命名空间，改源模块里的同名属性改不动它 —— 会静默失效。
 （`_event_follow_up_text` 不一样：它在 `follow_up` 模块内部按全局名查找，所以要
@@ -85,7 +85,6 @@ tag，覆盖核心文件会在升级时丢失，或者版本对不上造成更�
 - `data/temp` 由 `TempDirCleaner` 按**总量**清理（默认上限 1GB，超了删最旧的
   30%，见 `temp_dir_cleaner.py:33-35`），不是按时间。磁盘紧张时，隔很久才去读
   那个路径有被清掉的可能。
-- 上游修好后本插件即可删除。
 """
 
 import asyncio
@@ -108,7 +107,7 @@ GUARDED_MEDIA = (File, Record, Video)
 # 单个文件的下载上限。超了就退回排队，不拖着整条事件管线。
 DOWNLOAD_TIMEOUT = 30
 
-# 打在包装函数上的标记，用来识别「补丁是否已经生效」（热重载会重复走到这里）。
+# 打在包装函数上的标记，用来识别「拦截是否已经生效」（热重载会重复走到这里）。
 _PATCH_MARK = "_file_delivery_patched"
 
 _STATUS: dict[str, str] = {}
@@ -242,7 +241,7 @@ def _install_capture_guard() -> str:
 
 
 def install() -> dict[str, str]:
-    """装三个补丁并返回各自的状态。幂等，重复调用无副作用。
+    """装上三处拦截并返回各自的状态。幂等，重复调用无副作用。
 
     单独抽成模块级函数是为了让 test_offline.py 不构造 Context 也能测。
     """
@@ -257,7 +256,7 @@ def install() -> dict[str, str]:
 @register(
     "file_delivery",
     "Elarian",
-    "修复 Agent 运行中发来的文件被插话通道吞掉、从未下载的问题（上游 bug 的临时补丁）。",
+    "让 Agent 正忙时发来的文件真正送达 —— 入口即落盘，运行中也能读到。",
     "2.0.0",
 )
 class FileDelivery(Star):
@@ -271,7 +270,7 @@ class FileDelivery(Star):
     @filter.command("filedelivery")
     @filter.permission_type(PermissionType.ADMIN)
     async def filedelivery(self, event: AstrMessageEvent):
-        """看一眼三个补丁是不是都挂上了。"""
+        """看一眼三处拦截是不是都挂上了。"""
         yield event.plain_result(
             "file_delivery\n"
             + "\n".join(f"  {k}：{v}" for k, v in _STATUS.items())

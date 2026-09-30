@@ -1,4 +1,4 @@
-"""离线自测：不起 AstrBot、不连 QQ、不发消息，直接验证三个补丁的行为。
+"""离线自测：不起 AstrBot、不连 QQ、不发消息，直接验证三处拦截的行为。
 
 跑法见 README。**必须把 `ASTRBOT_ROOT` / `ASTRBOT_CONFIG_PATH` 重定向掉** ——
 光 `import astrbot` 就会走到 `AstrBotConfig.__init__` 往 `data/cmd_config.json`
@@ -28,7 +28,7 @@ def check(name: str, got, want) -> None:
 
 
 def make_event(segments, text: str = "") -> types.SimpleNamespace:
-    """够三个补丁用：它们只读 message_obj.message、file_，以及文本与概要。"""
+    """够三处拦截用：它们只读 message_obj.message、file_，以及文本与概要。"""
     ev = types.SimpleNamespace()
     ev.message_obj = types.SimpleNamespace(message=segments)
     ev.get_message_str = lambda: text
@@ -79,7 +79,7 @@ def main() -> int:
 
     try:
         status = mod.install()
-        check("三个补丁都报已生效", set(status.values()), {"已生效"})
+        check("三处拦截都报已生效", set(status.values()), {"已生效"})
 
         patched_capture = internal.try_capture_follow_up
         patched_text = follow_up._event_follow_up_text
@@ -163,7 +163,7 @@ def main() -> int:
     if FAILED:
         print(f"❌ {len(FAILED)} 项未通过：{FAILED}")
         return 1
-    print("✅ 全部通过（三个补丁均已还原）")
+    print("✅ 全部通过（三处拦截均已还原）")
     return 0
 
 
