@@ -1,18 +1,20 @@
-# followup_media_guard
+# file_delivery
 
-修补 AstrBot 的一个 bug：**助手正在运行中时发来的文件会整个消失**。
+让「Agent 正忙时发来的文件」真正送达 —— 在适配器入口就把文件落盘，再把路径交给运行中的 Agent。
+
+它本质上是在修补 AstrBot 的一个 bug：**Agent 正在运行中时发来的文件会整个消失**。
 
 > 这是给上游 bug 打的临时补丁。上游修好后，把本插件和 compose 里那行挂载一起删掉即可。
 
 ## 症状
 
-助手某一轮还没结束（正在跑工具调用循环）时，同一发送者再发一个**文件**：
+Agent 某一轮还没结束（正在跑工具调用循环）时，同一发送者再发一个**文件**：
 
-- 助手那边只看到一行 `[ComponentType.File]` —— 没有文件名，也没有链接；
+- Agent 那边只看到一行 `[ComponentType.File]` —— 没有文件名，也没有链接；
 - 文件**从未被下载**：`data/temp`、`data/attachments`、工作区和数据库里都没有实体；
 - 事后找不回来（存档是 path-free 的）。
 
-与文件大小无关（4 字节的也照样丢），唯一的变量是**发送时机** —— 助手空闲时发就正常落盘为 `data/temp/fileseg_*`，并以 `[File Attachment: name …, path …]` 进入上下文。
+与文件大小无关（4 字节的也照样丢），唯一的变量是**发送时机** —— Agent 空闲时发就正常落盘为 `data/temp/fileseg_*`，并以 `[File Attachment: name …, path …]` 进入上下文。
 
 ## 成因（AstrBot v4.28.2）
 
@@ -25,7 +27,7 @@
 
    消息概要会把非文本组件折叠成占位符（`astr_message_event.py:144` 的 `_outline_chain`），File ⇒ `[ComponentType.File]`。
 
-2. 这条插话一旦被运行中的助手**消费**，事件当场终止：
+2. 这条插话一旦被运行中的 Agent**消费**，事件当场终止：
 
    ```
    internal.py:200-210  "Follow-up ticket already consumed, stopping processing" → return
@@ -41,7 +43,7 @@
 
 ## 修法：入口物化 + 插话带路径
 
-**入口就下载，然后把路径塞进插话文本** —— 运行中的助手当场就能 `Read` 那个文件，不用等本轮结束。
+**入口就下载，然后把路径塞进插话文本** —— 运行中的 Agent 当场就能 `Read` 那个文件，不用等本轮结束。
 
 三个补丁，缺一不可：
 
@@ -59,19 +61,19 @@
 
 ## 装法
 
-插件源码在**本仓库**，不在 QQBot 仓库里 —— 所以 compose 里挂的是 `../followup_media_guard`（相对 compose 文件所在目录）。跟 `qq_api` 一样，插件要**逐个挂**：
+插件源码在**本仓库**，不在 QQBot 仓库里 —— 所以 compose 里挂的是 `../file_delivery`（相对 compose 文件所在目录）。跟 `qq_api` 一样，插件要**逐个挂**：
 
 ```yaml
-      - ../followup_media_guard:/AstrBot/data/plugins/followup_media_guard
+      - ../file_delivery:/AstrBot/data/plugins/file_delivery
 ```
 
 挂完重启 astrbot。启动日志里出现这行就算生效：
 
 ```
-[followup_media_guard] 入口物化=已生效；插话带路径=已生效；未物化则排队=已生效
+[file_delivery] 入口物化=已生效；插话带路径=已生效；未物化则排队=已生效
 ```
 
-在聊天里发 `/followupguard`（仅管理员）也能随时复查三个补丁的状态。
+在聊天里发 `/filedelivery`（仅管理员）也能随时复查三个补丁的状态。
 
 ## 实现上的三个坑
 
@@ -86,7 +88,7 @@
 ## 边界
 
 - **`File` 在入口预下载**；`Record` / `Video` 不预下载，一律排队（和以前一样）。
-- **`Image` 既不预下载也不排队** —— 仍走插话，文本里还是 `[图片]` 占位符。原因：它走 `MediaResolver`，没有 `get_file()` 那种「本地已有就短路」的性质，预下载省不下重复；而且群里图片太频繁，全量预下载不划算。**这是已知限制**：运行中的助手看不到插话里的图片。要改的话，把 `main.py` 的 `INGRESS_MATERIALIZE` 加上 `Image` 即可，但要接受图片全量预下载的代价。
+- **`Image` 既不预下载也不排队** —— 仍走插话，文本里还是 `[图片]` 占位符。原因：它走 `MediaResolver`，没有 `get_file()` 那种「本地已有就短路」的性质，预下载省不下重复；而且群里图片太频繁，全量预下载不划算。**这是已知限制**：运行中的 Agent 看不到插话里的图片。要改的话，把 `main.py` 的 `INGRESS_MATERIALIZE` 加上 `Image` 即可，但要接受图片全量预下载的代价。
 - **预下载失败或超时（30s）不会让消息丢失**，只会退回排队，让正常处理再试一次。
 - 纯文件消息的插话文本会长这样 —— 上游概要那行 `[ComponentType.File]` 占位符还在，插件只在它后面追加路径，不去动原有内容：
 
@@ -101,12 +103,12 @@
 
 `test_offline.py` 不连 QQ、不起 AstrBot、不联网，验证三个补丁拦没拦住、该委派的有没委派、文本拼得对不对（19 项）：
 
-> 下面的命令在 **QQBot 仓库根目录**执行：`scripts/dock.sh` 在那儿，而插件源码在本仓库，所以路径写成 `../followup_media_guard/`。
+> 下面的命令在 **QQBot 仓库根目录**执行：`scripts/dock.sh` 在那儿，而插件源码在本仓库，所以路径写成 `../file_delivery/`。
 
 ```bash
 ./scripts/dock.sh "docker exec astrbot mkdir -p /tmp/fakeroot /tmp/fmg_check"
-./scripts/dock.sh "docker cp ../followup_media_guard/main.py astrbot:/tmp/fmg_check/main.py"
-./scripts/dock.sh "docker cp ../followup_media_guard/test_offline.py astrbot:/tmp/fmg_check/test_offline.py"
+./scripts/dock.sh "docker cp ../file_delivery/main.py astrbot:/tmp/fmg_check/main.py"
+./scripts/dock.sh "docker cp ../file_delivery/test_offline.py astrbot:/tmp/fmg_check/test_offline.py"
 ./scripts/dock.sh "docker exec -e ASTRBOT_ROOT=/tmp/fakeroot -e ASTRBOT_CONFIG_PATH=/tmp/fakeroot/cmd_config.json astrbot python3 /tmp/fmg_check/test_offline.py"
 ```
 

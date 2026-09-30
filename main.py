@@ -1,11 +1,14 @@
-"""修复「助手运行中发来的文件会丢失」—— 上游 bug 的临时补丁。
+"""让「Agent 正在忙时发来的文件」真正送达 —— AstrBot 上游 bug 的临时补丁。
+
+一句话：在适配器入口就把文件下载落盘，再把路径塞进插话文本，运行中的 Agent 当场
+就能读到。下面记的是它为什么需要存在。
 
 ## 症状
 
-助手正在一次运行中（active runner 未结束）时，同一发送者再发来的**文件**会整个
-消失：助手上下文里只剩一行 `[ComponentType.File]`，磁盘（`data/temp`、
+Agent 正在一次运行中（active runner 未结束）时，同一发送者再发来的**文件**会整个
+消失：Agent 上下文里只剩一行 `[ComponentType.File]`，磁盘（`data/temp`、
 `data/attachments`、工作区）和数据库里都没有实体，事后无从找回。与文件大小无关，
-唯一的变量是**发送时机** —— 助手空闲时发就正常落盘为 `data/temp/fileseg_*`。
+唯一的变量是**发送时机** —— Agent 空闲时发就正常落盘为 `data/temp/fileseg_*`。
 
 ## 成因（AstrBot v4.28.2）
 
@@ -17,7 +20,7 @@
    消息概要会把非文本组件折叠成占位符（`astr_message_event.py:144` 的
    `_outline_chain`），File ⇒ `[ComponentType.File]`，**不带文件名、不带 URL**。
 
-2. 这条插话一旦被运行中的助手消费，事件当场终止：
+2. 这条插话一旦被运行中的 Agent 消费，事件当场终止：
 
        internal.py:200-210  "Follow-up ticket already consumed, stopping processing" → return
 
@@ -106,7 +109,7 @@ GUARDED_MEDIA = (File, Record, Video)
 DOWNLOAD_TIMEOUT = 30
 
 # 打在包装函数上的标记，用来识别「补丁是否已经生效」（热重载会重复走到这里）。
-_PATCH_MARK = "_followup_media_guard_patched"
+_PATCH_MARK = "_file_delivery_patched"
 
 _STATUS: dict[str, str] = {}
 
@@ -138,12 +141,12 @@ async def _materialize(abm) -> None:
             await asyncio.wait_for(comp.get_file(), timeout=DOWNLOAD_TIMEOUT)
         except asyncio.TimeoutError:
             logger.warning(
-                f"[followup_media_guard] 下载超时（{DOWNLOAD_TIMEOUT}s），"
+                f"[file_delivery] 下载超时（{DOWNLOAD_TIMEOUT}s），"
                 f"该文件退回排队路径：{comp.name}"
             )
         except Exception:
             logger.warning(
-                f"[followup_media_guard] 下载失败，该文件退回排队路径：{comp.name}",
+                f"[file_delivery] 下载失败，该文件退回排队路径：{comp.name}",
                 exc_info=True,
             )
 
@@ -228,7 +231,7 @@ def _install_capture_guard() -> str:
         pending = _pending_media(event)
         if pending:
             logger.info(
-                f"[followup_media_guard] {pending} 未物化，不并入插话，改走正常路径"
+                f"[file_delivery] {pending} 未物化，不并入插话，改走正常路径"
             )
             return None
         return original(event)
@@ -252,25 +255,25 @@ def install() -> dict[str, str]:
 
 
 @register(
-    "followup_media_guard",
+    "file_delivery",
     "Elarian",
-    "修复助手运行中发来的文件被插话通道吞掉、从未下载的问题（上游 bug 的临时补丁）。",
+    "修复 Agent 运行中发来的文件被插话通道吞掉、从未下载的问题（上游 bug 的临时补丁）。",
     "2.0.0",
 )
-class FollowUpMediaGuard(Star):
+class FileDelivery(Star):
     def __init__(self, context: Context) -> None:
         super().__init__(context)
         logger.info(
-            "[followup_media_guard] "
+            "[file_delivery] "
             + "；".join(f"{k}={v}" for k, v in install().items())
         )
 
-    @filter.command("followupguard")
+    @filter.command("filedelivery")
     @filter.permission_type(PermissionType.ADMIN)
-    async def followupguard(self, event: AstrMessageEvent):
+    async def filedelivery(self, event: AstrMessageEvent):
         """看一眼三个补丁是不是都挂上了。"""
         yield event.plain_result(
-            "followup_media_guard\n"
+            "file_delivery\n"
             + "\n".join(f"  {k}：{v}" for k, v in _STATUS.items())
             + f"\n入口预下载：{', '.join(t.__name__ for t in INGRESS_MATERIALIZE)}"
             f"\n未物化则排队：{', '.join(t.__name__ for t in GUARDED_MEDIA)}"

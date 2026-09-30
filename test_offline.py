@@ -38,7 +38,7 @@ def make_event(segments, text: str = "") -> types.SimpleNamespace:
 
 def load_plugin():
     spec = importlib.util.spec_from_file_location(
-        "followup_media_guard_main", Path(__file__).with_name("main.py")
+        "file_delivery_main", Path(__file__).with_name("main.py")
     )
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
